@@ -61,41 +61,36 @@ class FeiShuChanel(ChatChannel):
             "Authorization": "Bearer " + access_token,
             "Content-Type": "application/json",
         }
-        msg_type = "text"
-        logger.info(f"[FeiShu] start send reply message, type={context.type}, content={reply.content}")
-        reply_content = reply.content
-        content_key = "text"
-        if reply.type == ReplyType.IMAGE_URL:
-            # 图片上传
-            reply_content = self._upload_image_url(reply.content, access_token)
-            if not reply_content:
-                logger.warning("[FeiShu] upload file failed")
-                return
-            msg_type = "image"
-            content_key = "image_key"
+        content = {
+            "zh_cn": {
+                "content": [[
+                    {
+                        "tag": "md",
+                        "text": reply.content
+                    }
+                ]]
+            }   
+        }
+        contentStr = json.dumps(content)
+        data = {
+            "msg_type": "post",
+            "content": contentStr
+        }
         if is_group:
             # 群聊中直接回复
             url = f"https://open.feishu.cn/open-apis/im/v1/messages/{msg.msg_id}/reply"
-            data = {
-                "msg_type": msg_type,
-                "content": json.dumps({content_key: reply_content})
-            }
             res = requests.post(url=url, headers=headers, json=data, timeout=(5, 10))
         else:
             url = "https://open.feishu.cn/open-apis/im/v1/messages"
             params = {"receive_id_type": context.get("receive_id_type") or "open_id"}
-            data = {
-                "receive_id": context.get("receiver"),
-                "msg_type": msg_type,
-                "content": json.dumps({content_key: reply_content})
-            }
+            data["receive_id"] = context.get("receiver")
             res = requests.post(url=url, headers=headers, params=params, json=data, timeout=(5, 10))
+
         res = res.json()
         if res.get("code") == 0:
             logger.info(f"[FeiShu] send message success")
         else:
             logger.error(f"[FeiShu] send message failed, code={res.get('code')}, msg={res.get('msg')}")
-
 
     def fetch_access_token(self) -> str:
         url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/"
@@ -117,7 +112,6 @@ class FeiShuChanel(ChatChannel):
                 return res.get("tenant_access_token")
         else:
             logger.error(f"[FeiShu] fetch token error, res={response}")
-
 
     def _upload_image_url(self, img_url, access_token):
         logger.debug(f"[WX] start download image, img_url={img_url}")
@@ -142,7 +136,6 @@ class FeiShuChanel(ChatChannel):
             logger.info(f"[FeiShu] upload file, res={upload_response.content}")
             os.remove(temp_name)
             return upload_response.json().get("data").get("image_key")
-
 
 
 class FeishuController:
