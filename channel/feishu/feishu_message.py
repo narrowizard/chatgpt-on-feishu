@@ -22,6 +22,33 @@ class FeishuMessage(ChatMessage):
             self.ctype = ContextType.TEXT
             content = json.loads(msg.get('content'))
             self.content = content.get("text").strip()
+        elif msg_type == "post":
+            self.ctype = ContextType.TEXT
+            try:
+                content = json.loads(msg.get('content'))
+                logger.debug(f"[FeiShu] post message content: {content}")
+                
+                # 提取post消息中的文本内容
+                text_parts = []
+                content_list = content.get("content", [])
+                if isinstance(content_list, list):
+                    for content_item in content_list:
+                        if isinstance(content_item, list):
+                            for item in content_item:
+                                if isinstance(item, dict) and item.get("tag") == "text":
+                                    text = item.get("text", "")
+                                    if text:
+                                        text_parts.append(text)
+                        elif isinstance(content_item, dict):
+                            if content_item.get("tag") == "text":
+                                text = content_item.get("text", "")
+                                if text:
+                                    text_parts.append(text)
+                self.content = " ".join(text_parts).strip()
+                logger.debug(f"[FeiShu] extracted post text: {self.content}")
+            except Exception as e:
+                logger.error(f"[FeiShu] parse post message error: {str(e)}")
+                self.content = ""
         elif msg_type == "file":
             self.ctype = ContextType.FILE
             content = json.loads(msg.get("content"))

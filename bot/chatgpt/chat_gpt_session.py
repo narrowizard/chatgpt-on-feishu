@@ -69,7 +69,7 @@ def num_tokens_from_messages(messages, model):
                    "gpt-4-1106-preview", const.GPT4_TURBO_PREVIEW, const.GPT4_VISION_PREVIEW, const.GPT4_TURBO_01_25,
                    const.GPT_4o, const.GPT_4O_0806, const.GPT_4o_MINI, const.LINKAI_4o, const.LINKAI_4_TURBO]:
         return num_tokens_from_messages(messages, model="gpt-4")
-    elif model.startswith("claude-3"):
+    elif model.startswith("claude-3") or model.startswith("deepseek"):
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo")
     try:
         encoding = tiktoken.encoding_for_model(model)
