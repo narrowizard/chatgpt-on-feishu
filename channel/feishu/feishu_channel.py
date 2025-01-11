@@ -218,6 +218,27 @@ class FeishuController:
             logger.error(e)
             return self.FAILED_MSG
 
+    def _get_message_by_id(self, message_id, access_token) -> str:
+        """get message by message_id"""
+        url = f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            items = response.json().get("data", {}).get("items", [])
+            first_item = items[0]
+            msg = first_item.get("body", {}).get("content", "")
+            logger.debug(f"[FeiShu] get message by id, items={items}")
+            if msg == "Merged and Forwarded Message":
+                # combine forwarded messages
+                msg = ""
+                for item in items[1:]:
+                    msg += item.get("body", {}).get("content", "")
+            return msg
+        return None
+
     def _compose_context(self, ctype: ContextType, content, **kwargs):
         context = Context(ctype, content)
         context.kwargs = kwargs
@@ -228,6 +249,14 @@ class FeishuController:
         context["session_id"] = cmsg.from_user_id
         context["receiver"] = cmsg.other_user_id
 
+        # get origin message if it's a reply
+        if cmsg.parent_id:
+            logger.debug(f"[FeiShu] get parent message, parent_id={cmsg.parent_id}")
+            parent_msg = self._get_message_by_id(cmsg.parent_id, cmsg.access_token)
+            if parent_msg:
+                context["parent_msg"] = parent_msg
+                logger.debug(f"[FeiShu] parent message: {context['parent_msg']}")
+
         if ctype == ContextType.TEXT:
             # 1.文本请求
             # 图片生成处理
@@ -237,7 +266,10 @@ class FeishuController:
                 context.type = ContextType.IMAGE_CREATE
             else:
                 context.type = ContextType.TEXT
-            context.content = content.strip()
+                if cmsg.parent_id and context.get("parent_msg"):
+                    context.content = f"Origin message: ```{context['parent_msg']}```\n\n{content.strip()}"
+                else:
+                    context.content = content.strip()
 
         elif context.type == ContextType.VOICE:
             # 2.语音请求

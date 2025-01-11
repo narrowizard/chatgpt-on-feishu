@@ -74,8 +74,10 @@ class FeishuMessage(ChatMessage):
                     logger.info(f"[FeiShu] Failed to download file, key={file_key}, res={response.text}")
             self._prepare_fn = _download_file
         else:
+            # Unsupported message type: Type:merge_forward
             raise NotImplementedError("Unsupported message type: Type:{} ".format(msg_type))
 
+        self.parent_id = msg.get("parent_id")
         self.from_user_id = sender.get("sender_id").get("open_id")
         self.to_user_id = event.get("app_id")
         if is_group:
