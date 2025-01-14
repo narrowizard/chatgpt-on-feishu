@@ -1,10 +1,11 @@
 """
 channel factory
 """
+from bot.bot import Bot
 from common import const
 
 
-def create_bot(bot_type):
+def create_bot(bot_type) -> Bot:
     """
     create a bot_type instance
     :param bot_type: bot type code

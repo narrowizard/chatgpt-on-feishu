@@ -172,6 +172,7 @@ class ChatChannel(Channel):
         logger.debug("[chat_channel] ready to decorate reply: {}".format(reply))
 
         # reply的包装步骤
+        logger.debug("[chat_channel] ready to send reply: {}".format(reply))
         if reply and reply.content:
             reply = self._decorate_reply(context, reply)
 
@@ -188,9 +189,12 @@ class ChatChannel(Channel):
         reply = e_context["reply"]
         if not e_context.is_pass():
             logger.debug("[chat_channel] ready to handle context: type={}, content={}".format(context.type, context.content))
-            if context.type == ContextType.TEXT or context.type == ContextType.IMAGE_CREATE:  # 文字和图片消息
+            if context.type == ContextType.TEXT:  # 文字消息
                 context["channel"] = e_context["channel"]
                 reply = super().build_reply_content(context.content, context)
+            elif context.type == ContextType.IMAGE_CREATE:  # 图片消息
+                context["channel"] = e_context["channel"]
+                reply = super().build_text_to_image(context.content)
             elif context.type == ContextType.VOICE:  # 语音消息
                 cmsg = context["msg"]
                 cmsg.prepare()

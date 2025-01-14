@@ -61,21 +61,38 @@ class FeiShuChanel(ChatChannel):
             "Authorization": "Bearer " + access_token,
             "Content-Type": "application/json",
         }
-        content = {
-            "zh_cn": {
-                "content": [[
-                    {
-                        "tag": "md",
-                        "text": reply.content
-                    }
-                ]]
-            }   
-        }
-        contentStr = json.dumps(content)
-        data = {
-            "msg_type": "post",
-            "content": contentStr
-        }
+        
+        if reply.type == ReplyType.IMAGE_URL:
+            # 处理图片消息
+            image_key = self._upload_image_url(reply.content, access_token)
+            if not image_key:
+                logger.error("[FeiShu] upload image failed")
+                return
+            content = {
+                "image_key": image_key
+            }
+            data = {
+                "msg_type": "image",
+                "content": json.dumps(content)
+            }
+        else:
+            # 处理文本消息
+            content = {
+                "zh_cn": {
+                    "content": [[
+                        {
+                            "tag": "md",
+                            "text": reply.content
+                        }
+                    ]]
+                }
+            }
+            contentStr = json.dumps(content)
+            data = {
+                "msg_type": "post",
+                "content": contentStr
+            }
+
         if is_group:
             # 群聊中直接回复
             url = f"https://open.feishu.cn/open-apis/im/v1/messages/{msg.msg_id}/reply"

@@ -5,6 +5,7 @@
   "claude_api_key": "YOUR API KEY",
   "text_to_image": "dall-e-2",
   "voice_to_text": "openai",
+  "image_to_text": "zhipuai",
   "text_to_voice": "openai",
   "proxy": "",
   "hot_reload": false,

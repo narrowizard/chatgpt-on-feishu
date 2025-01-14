@@ -5,6 +5,7 @@ from common import const
 from common.log import logger
 from common.singleton import singleton
 from config import conf
+from image.image_factory import create_image
 from translate.factory import create_translator
 from voice.factory import create_voice
 
@@ -17,6 +18,8 @@ class Bridge(object):
             "voice_to_text": conf().get("voice_to_text", "openai"),
             "text_to_voice": conf().get("text_to_voice", "google"),
             "translate": conf().get("translate", "baidu"),
+            "image_to_text": conf().get("image_to_text", "zhipuai"),
+            "text_to_image": conf().get("text_to_image", "zhipuai"),
         }
         # 这边取配置的模型
         bot_type = conf().get("bot_type")
@@ -74,6 +77,8 @@ class Bridge(object):
                 self.bots[typename] = create_bot(self.btype[typename])
             elif typename == "translate":
                 self.bots[typename] = create_translator(self.btype[typename])
+            elif typename == "text_to_image":
+                self.bots[typename] = create_image(self.btype[typename])
         return self.bots[typename]
 
     def get_bot_type(self, typename):
@@ -90,6 +95,12 @@ class Bridge(object):
 
     def fetch_translate(self, text, from_lang="", to_lang="en") -> Reply:
         return self.get_bot("translate").translate(text, from_lang, to_lang)
+
+    def fetch_text_to_image(self, text) -> Reply:
+        return self.get_bot("text_to_image").reply_image(text)
+
+    def fetch_image_to_text(self, imageFile) -> Reply:
+        return self.get_bot("image_to_text").imageToText(imageFile)
 
     def find_chat_bot(self, bot_type: str):
         if self.chat_bots.get(bot_type) is None:

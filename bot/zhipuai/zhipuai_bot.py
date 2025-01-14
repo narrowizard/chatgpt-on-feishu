@@ -1,14 +1,13 @@
 # encoding:utf-8
 
 import time
+from typing import Optional
 
 import openai
-import openai.error
-from bot.bot import Bot
+from bot.bot import Bot, IImageCreate
 from bot.zhipuai.zhipu_ai_session import ZhipuAISession
-from bot.zhipuai.zhipu_ai_image import ZhipuAIImage
 from bot.session_manager import SessionManager
-from bridge.context import ContextType
+from bridge.context import Context, ContextType
 from bridge.reply import Reply, ReplyType
 from common.log import logger
 from config import conf, load_config
@@ -16,12 +15,12 @@ from zhipuai import ZhipuAI
 
 
 # ZhipuAI对话模型API
-class ZHIPUAIBot(Bot, ZhipuAIImage):
+class ZHIPUAIBot(Bot, IImageCreate):
     def __init__(self):
         super().__init__()
         self.sessions = SessionManager(ZhipuAISession, model=conf().get("model") or "ZHIPU_AI")
         self.args = {
-            "model": conf().get("model") or "glm-4",  # 对话模型的名称
+            "model": conf().get("zhipu_ai_model") or "glm-4",  # 对话模型的名称
             "temperature": conf().get("temperature", 0.9),  # 值在(0,1)之间(智谱AI 的温度不能取 0 或者 1)
             "top_p": conf().get("top_p", 0.7),  # 值在(0,1)之间(智谱AI 的 top_p 不能取 0 或者 1)
         }
@@ -147,3 +146,29 @@ class ZHIPUAIBot(Bot, ZhipuAIImage):
                 return self.reply_text(session, api_key, args, retry_count + 1)
             else:
                 return result
+
+    def create_img(self, query, retry_count=0, api_key=None, api_base=None):
+        try:
+            if conf().get("rate_limit_dalle"):
+                return False, "请求太快了，请休息一下再问我吧"
+            logger.info("[ZHIPU_AI] image_query={}".format(query))
+            response = self.client.images.generations(
+                prompt=query,
+                n=1,  # 每次生成图片的数量
+                model=conf().get("zhipu_ai_text_to_image_model") or "cogview-3",
+                size=conf().get("image_create_size", "1024x1024"),  # 图片大小,可选有 256x256, 512x512, 1024x1024
+                quality="standard",
+            )
+            image_url = response.data[0].url
+            logger.info("[ZHIPU_AI] image_url={}".format(image_url))
+            return True, image_url
+        except Exception as e:
+            logger.exception(e)
+            return False, "画图出现问题，请休息一下再问我吧"
+
+    def reply_image(self, query: str, context: Optional[Context] = None) -> Reply:
+        success, retstring = self.create_img(query, 0)
+        if success:
+            return Reply(ReplyType.IMAGE_URL, retstring)
+        else:
+            return Reply(ReplyType.ERROR, retstring)

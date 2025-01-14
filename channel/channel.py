@@ -42,3 +42,6 @@ class Channel(object):
 
     def build_text_to_voice(self, text) -> Reply:
         return Bridge().fetch_text_to_voice(text)
+
+    def build_text_to_image(self, text) -> Reply:
+        return Bridge().fetch_text_to_image(text)
