@@ -172,6 +172,7 @@ available_setting = {
     "zhipu_ai_api_base": "https://open.bigmodel.cn/api/paas/v4",
     "zhipu_ai_model": "glm-4",
     "zhipu_ai_text_to_image_model": "CogView-3-Plus",
+    "zhipu_ai_image_to_text_model": "glm-4v-plus",
     "moonshot_api_key": "",
     "moonshot_base_url": "https://api.moonshot.cn/v1/chat/completions",
     # LinkAI平台配置

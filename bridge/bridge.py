@@ -5,7 +5,7 @@ from common import const
 from common.log import logger
 from common.singleton import singleton
 from config import conf
-from image.image_factory import create_image
+from image.image_factory import create_image, create_text
 from translate.factory import create_translator
 from voice.factory import create_voice
 
@@ -79,6 +79,8 @@ class Bridge(object):
                 self.bots[typename] = create_translator(self.btype[typename])
             elif typename == "text_to_image":
                 self.bots[typename] = create_image(self.btype[typename])
+            elif typename == "image_to_text":
+                self.bots[typename] = create_text(self.btype[typename])
         return self.bots[typename]
 
     def get_bot_type(self, typename):

@@ -27,7 +27,7 @@ class FeishuMessage(ChatMessage):
             try:
                 content = json.loads(msg.get('content'))
                 logger.debug(f"[FeiShu] post message content: {content}")
-                
+
                 # 提取post消息中的文本内容
                 text_parts = []
                 content_list = content.get("content", [])
@@ -73,6 +73,27 @@ class FeishuMessage(ChatMessage):
                 else:
                     logger.info(f"[FeiShu] Failed to download file, key={file_key}, res={response.text}")
             self._prepare_fn = _download_file
+        elif msg_type == "image":
+            self.ctype = ContextType.IMAGE
+            content = json.loads(msg.get("content"))
+            image_key = content.get("image_key")
+            self.content = TmpDir().path() + image_key + ".png"
+            logger.debug(f"[FeiShu] image_url: {self.content}")
+            # 如果消息只有一张图, 则解释图片
+            def _download_image():
+                # 如果响应状态码是200，则将响应内容写入本地文件
+                url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}?type=image"
+                logger.info(f"[FeiShu] start downloading image, url={url}")
+                headers = {
+                    "Authorization": "Bearer " + access_token,
+                }
+                response = requests.get(url=url, headers=headers)
+                if response.status_code == 200:
+                    with open(self.content, "wb") as f:
+                        f.write(response.content)
+                else:
+                    logger.info(f"[FeiShu] Failed to download image, key={msg.get('image_key')}, res={response.text}")
+            self._prepare_fn = _download_image
         else:
             # Unsupported message type: Type:merge_forward
             raise NotImplementedError("Unsupported message type: Type:{} ".format(msg_type))

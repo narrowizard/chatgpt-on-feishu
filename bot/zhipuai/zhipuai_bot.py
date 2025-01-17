@@ -1,5 +1,6 @@
 # encoding:utf-8
 
+import base64
 import time
 from typing import Optional
 
@@ -170,5 +171,43 @@ class ZHIPUAIBot(Bot, IImageCreate):
         success, retstring = self.create_img(query, 0)
         if success:
             return Reply(ReplyType.IMAGE_URL, retstring)
+        else:
+            return Reply(ReplyType.ERROR, retstring)
+        
+    def explain_img(self, imageFile):
+        model = conf().get("zhipu_ai_image_to_text_model")
+        try:
+            with open(imageFile, 'rb') as img_file:
+                img_base = base64.b64encode(img_file.read()).decode('utf-8')
+
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{img_base}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": "请描述这个图片"
+                            }
+                        ]
+                    }
+                ]
+            )
+            return True, response.choices[0].message.content
+        except Exception as e:
+            logger.exception(f"[ZHIPU_AI] explain_img error: {e}")
+            return False, "图片描述失败，请稍后再试"
+
+    def imageToText(self, imageFile) -> Reply:
+        succ, retstring = self.explain_img(imageFile)
+        if succ:
+            return Reply(ReplyType.TEXT, retstring)
         else:
             return Reply(ReplyType.ERROR, retstring)
