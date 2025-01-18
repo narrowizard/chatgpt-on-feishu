@@ -58,16 +58,20 @@ class FeishuMessage(ChatMessage):
                                                 "file_path": TmpDir().path() + image_key + ".png"
                                             }
                                             text_parts.append(f"![{image_key}]")
+                                            # 记录图片信息
+                                            self._image_keys = list(self.appendix.keys())
+                                            
                                             # 设置图片下载函数
                                             def _download_image():
-                                                url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}"
-                                                headers = {
-                                                    "Authorization": "Bearer " + self.access_token,
-                                                }
-                                                params = {
-                                                    "type": "image"
-                                                }
-                                                _download_file_helper(url, headers, params, self.appendix[image_key]["file_path"])
+                                                for image_key in self._image_keys:
+                                                    url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}"
+                                                    headers = {
+                                                        "Authorization": "Bearer " + self.access_token,
+                                                    }
+                                                    params = {
+                                                        "type": "image"
+                                                    }
+                                                    _download_file_helper(url, headers, params, self.appendix[image_key]["file_path"])
                                             self._prepare_fn = _download_image
                         elif isinstance(content_item, dict):
                             if content_item.get("tag") == "text":
