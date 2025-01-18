@@ -239,6 +239,33 @@ class ChatChannel(Channel):
                 except Exception as e:
                     pass
                     # logger.warning("[chat_channel]delete temp file error: " + str(e))
+            elif context.type == ContextType.RICH_TEXT:  # 富文本消息
+                cmsg = context["msg"]
+                cmsg.prepare()
+                # 处理文本内容
+                text_content = context.content
+                # 处理图片附件
+                if hasattr(cmsg, "appendix") and cmsg.appendix:
+                    for image_key, appendix in cmsg.appendix.items():
+                        if appendix["type"] == "image":
+                            file_path = appendix["file_path"]
+                            image_key = appendix["key"]
+                            # 图片识别处理
+                            image_text = super().build_image_to_text(file_path)
+                            if image_text and image_text.content:
+                                text_content += f"\n![{image_key}]: {image_text.content}"
+                            # 删除临时文件
+                            try:
+                                os.remove(file_path)
+                            except Exception as e:
+                                pass
+                context.content = text_content
+                # 将富文本转换为普通文本继续处理
+                new_context = self._compose_context(ContextType.TEXT, text_content, **context.kwargs)
+                if new_context:
+                    reply = self._generate_reply(new_context)
+                else:
+                    return
             elif context.type == ContextType.SHARING:  # 分享信息，当前无默认逻辑
                 pass
             elif context.type == ContextType.FUNCTION or context.type == ContextType.FILE:  # 文件消息及函数调用等，当前无默认逻辑

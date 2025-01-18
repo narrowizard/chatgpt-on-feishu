@@ -8,7 +8,7 @@ msg_id: 消息id (必填)
 create_time: 消息创建时间
 
 ctype: 消息类型 : ContextType (必填)
-content: 消息内容, 如果是声音/图片，这里是文件路径 (必填)
+content: 消息内容, 如果是声音/图片，这里是文件路径 (必填), 如果是富文本, 使用 ![image_key] 格式来引用附件
 
 from_user_id: 发送者id (必填)
 from_user_nickname: 发送者昵称

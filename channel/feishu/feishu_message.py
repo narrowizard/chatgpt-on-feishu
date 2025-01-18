@@ -31,22 +31,44 @@ class FeishuMessage(ChatMessage):
             content = json.loads(msg.get('content'))
             self.content = content.get("text").strip()
         elif msg_type == "post":
-            self.ctype = ContextType.TEXT
+            self.ctype = ContextType.RICH_TEXT
             try:
                 content = json.loads(msg.get('content'))
                 logger.debug(f"[FeiShu] post message content: {content}")
 
-                # 提取post消息中的文本内容
+                # 提取post消息中的文本内容和图片附件
                 text_parts = []
+                self.appendix = {}
                 content_list = content.get("content", [])
                 if isinstance(content_list, list):
                     for content_item in content_list:
                         if isinstance(content_item, list):
                             for item in content_item:
-                                if isinstance(item, dict) and item.get("tag") == "text":
-                                    text = item.get("text", "")
-                                    if text:
-                                        text_parts.append(text)
+                                if isinstance(item, dict):
+                                    if item.get("tag") == "text":
+                                        text = item.get("text", "")
+                                        if text:
+                                            text_parts.append(text)
+                                    elif item.get("tag") == "img":
+                                        image_key = item.get("image_key")
+                                        if image_key:
+                                            self.appendix[image_key] = {
+                                                "type": "image",
+                                                "key": image_key,
+                                                "file_path": TmpDir().path() + image_key + ".png"
+                                            }
+                                            text_parts.append(f"![{image_key}]")
+                                            # 设置图片下载函数
+                                            def _download_image():
+                                                url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}"
+                                                headers = {
+                                                    "Authorization": "Bearer " + self.access_token,
+                                                }
+                                                params = {
+                                                    "type": "image"
+                                                }
+                                                _download_file_helper(url, headers, params, self.appendix[image_key]["file_path"])
+                                            self._prepare_fn = _download_image
                         elif isinstance(content_item, dict):
                             if content_item.get("tag") == "text":
                                 text = content_item.get("text", "")
@@ -54,9 +76,11 @@ class FeishuMessage(ChatMessage):
                                     text_parts.append(text)
                 self.content = " ".join(text_parts).strip()
                 logger.debug(f"[FeiShu] extracted post text: {self.content}")
+                logger.debug(f"[FeiShu] post message appendix: {self.appendix}")
             except Exception as e:
                 logger.error(f"[FeiShu] parse post message error: {str(e)}")
                 self.content = ""
+                self.appendix = []
         elif msg_type == "file":
             self.ctype = ContextType.FILE
             content = json.loads(msg.get("content"))
