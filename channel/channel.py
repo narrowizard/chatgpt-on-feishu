@@ -46,5 +46,5 @@ class Channel(object):
     def build_text_to_image(self, text) -> Reply:
         return Bridge().fetch_text_to_image(text)
 
-    def build_image_to_text(self, image_file) -> Reply:
-        return Bridge().fetch_image_to_text(image_file)
+    def build_image_to_text(self, images, describe) -> Reply:
+        return Bridge().fetch_image_to_text(images, describe)

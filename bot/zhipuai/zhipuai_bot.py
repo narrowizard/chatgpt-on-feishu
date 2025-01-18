@@ -174,39 +174,64 @@ class ZHIPUAIBot(Bot, IImageCreate):
         else:
             return Reply(ReplyType.ERROR, retstring)
         
-    def explain_img(self, imageFile):
+    def explain_img(self, images, text=None):
+        """
+        描述图片内容，支持多张图片和文本
+        :param images: 图片文件路径列表
+        :param text: 用户提供的文本描述或问题
+        :return: (是否成功, 描述结果)
+        """
         model = conf().get("zhipu_ai_image_to_text_model")
         try:
-            with open(imageFile, 'rb') as img_file:
-                img_base = base64.b64encode(img_file.read()).decode('utf-8')
+            # 处理多张图片
+            image_contents = []
+            for imageFile in images:
+                with open(imageFile, 'rb') as img_file:
+                    img_base = base64.b64encode(img_file.read()).decode('utf-8')
+                    image_contents.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{img_base}"
+                        }
+                    })
+
+            # 构建消息内容
+            messages = [{
+                "role": "user",
+                "content": image_contents
+            }]
+
+            # 添加用户文本描述或问题
+            if text:
+                messages[0]["content"].append({
+                    "type": "text",
+                    "text": text
+                })
+            else:
+                messages[0]["content"].append({
+                    "type": "text",
+                    "text": "请描述这些图片"
+                })
 
             response = self.client.chat.completions.create(
                 model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{img_base}"
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": "请描述这个图片"
-                            }
-                        ]
-                    }
-                ]
+                messages=messages
             )
             return True, response.choices[0].message.content
         except Exception as e:
             logger.exception(f"[ZHIPU_AI] explain_img error: {e}")
             return False, "图片描述失败，请稍后再试"
 
-    def imageToText(self, imageFile) -> Reply:
-        succ, retstring = self.explain_img(imageFile)
+    def imageToText(self, imageFiles, text=None) -> Reply:
+        """
+        图片转文字，支持多张图片和文本
+        :param imageFiles: 图片文件路径列表
+        :param text: 用户提供的文本描述或问题
+        :return: Reply对象
+        """
+        if isinstance(imageFiles, str):
+            imageFiles = [imageFiles]
+        succ, retstring = self.explain_img(imageFiles, text)
         if succ:
             return Reply(ReplyType.TEXT, retstring)
         else:

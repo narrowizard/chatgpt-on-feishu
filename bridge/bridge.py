@@ -101,8 +101,8 @@ class Bridge(object):
     def fetch_text_to_image(self, text) -> Reply:
         return self.get_bot("text_to_image").reply_image(text)
 
-    def fetch_image_to_text(self, imageFile) -> Reply:
-        return self.get_bot("image_to_text").imageToText(imageFile)
+    def fetch_image_to_text(self, images, describe) -> Reply:
+        return self.get_bot("image_to_text").imageToText(images, describe)
 
     def find_chat_bot(self, bot_type: str):
         if self.chat_bots.get(bot_type) is None:
