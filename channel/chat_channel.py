@@ -233,12 +233,6 @@ class ChatChannel(Channel):
                 }
                 # 图片识别处理
                 reply = super().build_image_to_text(file_path)
-                if reply.type == ReplyType.TEXT:
-                    new_context = self._compose_context(ContextType.TEXT, reply.content, **context.kwargs)
-                    if new_context:
-                        reply = self._generate_reply(new_context)
-                    else:
-                        return
                 # 删除临时文件
                 try:
                     os.remove(file_path)

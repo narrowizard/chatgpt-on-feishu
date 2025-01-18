@@ -6,6 +6,14 @@ from common.log import logger
 from common.tmp_dir import TmpDir
 from common import utils
 
+def _download_file_helper(url, headers, params, file_path):
+    response = requests.get(url=url, headers=headers, params=params)
+    if response.status_code == 200:
+        with open(file_path, "wb") as f:
+            f.write(response.content)
+    else:
+        logger.info(f"[FeiShu] Failed to download file, url={url}, res={response.text}")
+
 
 class FeishuMessage(ChatMessage):
     def __init__(self, event: dict, is_group=False, access_token=None):
@@ -58,7 +66,6 @@ class FeishuMessage(ChatMessage):
             self.content = TmpDir().path() + file_key + "." + utils.get_path_suffix(file_name)
 
             def _download_file():
-                # 如果响应状态码是200，则将响应内容写入本地文件
                 url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{file_key}"
                 headers = {
                     "Authorization": "Bearer " + access_token,
@@ -66,12 +73,7 @@ class FeishuMessage(ChatMessage):
                 params = {
                     "type": "file"
                 }
-                response = requests.get(url=url, headers=headers, params=params)
-                if response.status_code == 200:
-                    with open(self.content, "wb") as f:
-                        f.write(response.content)
-                else:
-                    logger.info(f"[FeiShu] Failed to download file, key={file_key}, res={response.text}")
+                _download_file_helper(url, headers, params, self.content)
             self._prepare_fn = _download_file
         elif msg_type == "image":
             self.ctype = ContextType.IMAGE
@@ -81,18 +83,14 @@ class FeishuMessage(ChatMessage):
             logger.debug(f"[FeiShu] image_url: {self.content}")
             # 如果消息只有一张图, 则解释图片
             def _download_image():
-                # 如果响应状态码是200，则将响应内容写入本地文件
-                url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}?type=image"
-                logger.info(f"[FeiShu] start downloading image, url={url}")
+                url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.msg_id}/resources/{image_key}"
                 headers = {
                     "Authorization": "Bearer " + access_token,
                 }
-                response = requests.get(url=url, headers=headers)
-                if response.status_code == 200:
-                    with open(self.content, "wb") as f:
-                        f.write(response.content)
-                else:
-                    logger.info(f"[FeiShu] Failed to download image, key={msg.get('image_key')}, res={response.text}")
+                params = {
+                    "type": "image"
+                }
+                _download_file_helper(url, headers, params, self.content)
             self._prepare_fn = _download_image
         else:
             # Unsupported message type: Type:merge_forward
