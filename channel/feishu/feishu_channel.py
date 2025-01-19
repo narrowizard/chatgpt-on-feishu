@@ -10,6 +10,7 @@ import uuid
 
 import requests
 import web
+from channel.channel import Channel
 from channel.feishu.feishu_message import FeishuMessage
 from bridge.context import Context
 from bridge.reply import Reply, ReplyType
@@ -246,13 +247,29 @@ class FeishuController:
         if response.status_code == 200:
             items = response.json().get("data", {}).get("items", [])
             first_item = items[0]
-            msg = first_item.get("body", {}).get("content", "")
+            msg_type = first_item.get("msg_type")
             logger.debug(f"[FeiShu] get message by id, items={items}")
-            if msg == "Merged and Forwarded Message":
+            msg = {
+                "text": "",
+                "appendix": [],
+            }
+            if msg_type == "merge_forward":
                 # combine forwarded messages
-                msg = ""
                 for item in items[1:]:
-                    msg += item.get("body", {}).get("content", "")
+                    item_type = item.get("msg_type")
+                    if item_type == "image":
+                        content_obj = json.loads(item.get("body", {}).get("content", "{}"))
+                        image_key = content_obj.get("image_key")
+                        msg["text"] += f"\n![{image_key}]"
+                        msg["appendix"].append({
+                            "type": "image",
+                            "key": image_key,
+                            "file_path": "TODO: download image",
+                        })
+                    else:
+                        msg["text"] += item.get("body", {}).get("content", "")
+            else:
+                msg["text"] = first_item.get("body", {}).get("content", "")
             return msg
         return None
 
@@ -283,11 +300,20 @@ class FeishuController:
                 context.type = ContextType.IMAGE_CREATE
             else:
                 context.type = ContextType.TEXT
-                if cmsg.parent_id and context.get("parent_msg"):
-                    context.content = f"Origin message: ```{context['parent_msg']}```\n\n{content.strip()}"
-                else:
-                    context.content = content.strip()
-
+                parent_msg = context.get("parent_msg")
+                context.content = content.strip()
+                if cmsg.parent_id and parent_msg:
+                    original_message = parent_msg.get("text")
+                    context.content += f"\nOrigin message: ```{original_message}```"
+                    appendix = parent_msg.get("appendix")
+                    if appendix and isinstance(appendix, list) and len(appendix) > 0:
+                        appendix_msg = ""
+                        for item in appendix:
+                            if item.get("type") == "image":
+                                img_desc = Channel().build_image_to_text(item.get("file_path"), "")
+                                appendix_msg += f"{item['key']}: {img_desc}\n"
+                        if appendix_msg:
+                            context.content += f"\nAppendix in origin message: ```{appendix_msg}```"
         elif context.type == ContextType.VOICE:
             # 2.语音请求
             if "desire_rtype" not in context and conf().get("voice_reply_voice"):

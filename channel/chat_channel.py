@@ -232,11 +232,12 @@ class ChatChannel(Channel):
                     "msg": context.get("msg")
                 }
                 # 图片识别处理
-                reply = super().build_image_to_text(file_path)
+                reply = super().build_image_to_text(file_path, "")
                 # 删除临时文件
                 try:
                     os.remove(file_path)
                 except Exception as e:
+                    logger.error("[chat_channel]delete temp file error: " + str(e))
                     pass
                     # logger.warning("[chat_channel]delete temp file error: " + str(e))
             elif context.type == ContextType.RICH_TEXT:  # 富文本消息
