@@ -236,60 +236,15 @@ class FeishuController:
             logger.error(e)
             return self.FAILED_MSG
 
-    def _get_message_by_id(self, message_id, access_token) -> str:
-        """get message by message_id"""
-        url = f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            items = response.json().get("data", {}).get("items", [])
-            first_item = items[0]
-            msg_type = first_item.get("msg_type")
-            logger.debug(f"[FeiShu] get message by id, items={items}")
-            msg = {
-                "text": "",
-                "appendix": [],
-            }
-            if msg_type == "merge_forward":
-                # combine forwarded messages
-                for item in items[1:]:
-                    item_type = item.get("msg_type")
-                    if item_type == "image":
-                        content_obj = json.loads(item.get("body", {}).get("content", "{}"))
-                        image_key = content_obj.get("image_key")
-                        msg["text"] += f"\n![{image_key}]"
-                        msg["appendix"].append({
-                            "type": "image",
-                            "key": image_key,
-                            "file_path": "TODO: download image",
-                        })
-                    else:
-                        msg["text"] += item.get("body", {}).get("content", "")
-            else:
-                msg["text"] = first_item.get("body", {}).get("content", "")
-            return msg
-        return None
-
     def _compose_context(self, ctype: ContextType, content, **kwargs):
         context = Context(ctype, content)
         context.kwargs = kwargs
         if "origin_ctype" not in context:
             context["origin_ctype"] = ctype
 
-        cmsg = context["msg"]
+        cmsg: FeishuMessage = context["msg"]
         context["session_id"] = cmsg.from_user_id
         context["receiver"] = cmsg.other_user_id
-
-        # get origin message if it's a reply
-        if cmsg.parent_id:
-            logger.debug(f"[FeiShu] get parent message, parent_id={cmsg.parent_id}")
-            parent_msg = self._get_message_by_id(cmsg.parent_id, cmsg.access_token)
-            if parent_msg:
-                context["parent_msg"] = parent_msg
-                logger.debug(f"[FeiShu] parent message: {context['parent_msg']}")
 
         if ctype == ContextType.TEXT:
             # 1.文本请求
@@ -300,7 +255,7 @@ class FeishuController:
                 context.type = ContextType.IMAGE_CREATE
             else:
                 context.type = ContextType.TEXT
-                parent_msg = context.get("parent_msg")
+                parent_msg = cmsg.parent_msg
                 context.content = content.strip()
                 if cmsg.parent_id and parent_msg:
                     original_message = parent_msg.get("text")
@@ -310,8 +265,8 @@ class FeishuController:
                         appendix_msg = ""
                         for item in appendix:
                             if item.get("type") == "image":
-                                img_desc = Channel().build_image_to_text(item.get("file_path"), "")
-                                appendix_msg += f"{item['key']}: {img_desc}\n"
+                                reply = Channel().build_image_to_text(item.get("file_path"), "")
+                                appendix_msg += f"{item['key']}: {reply.content}\n"
                         if appendix_msg:
                             context.content += f"\nAppendix in origin message: ```{appendix_msg}```"
         elif context.type == ContextType.VOICE:

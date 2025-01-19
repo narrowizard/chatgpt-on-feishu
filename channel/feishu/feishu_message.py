@@ -127,6 +127,41 @@ class FeishuMessage(ChatMessage):
         self.parent_id = msg.get("parent_id")
         self.from_user_id = sender.get("sender_id").get("open_id")
         self.to_user_id = event.get("app_id")
+        
+        # 获取父消息
+        self.parent_msg = None
+        if self.parent_id and self.access_token:
+            url = f"https://open.feishu.cn/open-apis/im/v1/messages/{self.parent_id}"
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                items = response.json().get("data", {}).get("items", [])
+                first_item = items[0]
+                msg_type = first_item.get("msg_type")
+                self.parent_msg = {
+                    "text": "",
+                    "appendix": [],
+                }
+                if msg_type == "merge_forward":
+                    # 合并转发消息
+                    for item in items[1:]:
+                        item_type = item.get("msg_type")
+                        if item_type == "image":
+                            content_obj = json.loads(item.get("body", {}).get("content", "{}"))
+                            image_key = content_obj.get("image_key")
+                            self.parent_msg["text"] += f"\n![{image_key}]"
+                            self.parent_msg["appendix"].append({
+                                "type": "image",
+                                "key": image_key,
+                                "file_path": "TODO: download image",
+                            })
+                        else:
+                            self.parent_msg["text"] += item.get("body", {}).get("content", "")
+                else:
+                    self.parent_msg["text"] = first_item.get("body", {}).get("content", "")
         if is_group:
             # 群聊
             self.other_user_id = msg.get("chat_id")
