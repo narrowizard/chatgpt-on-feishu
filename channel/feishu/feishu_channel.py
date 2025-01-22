@@ -258,6 +258,7 @@ class FeishuController:
                 parent_msg = cmsg.parent_msg
                 context.content = content.strip()
                 if cmsg.parent_id and parent_msg:
+                    logger.debug(f"[FeiShu] parent_msg: {parent_msg}")
                     original_message = parent_msg.get("text")
                     context.content += f"\nOrigin message: ```{original_message}```"
                     appendix = parent_msg.get("appendix")
