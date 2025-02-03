@@ -3,13 +3,16 @@
 import os
 import signal
 import sys
-import time
+from flask import Flask, request
 
 from channel import channel_factory
 from common import const
 from config import load_config
 from plugins import *
 import threading
+
+app = Flask(__name__)
+channels = {}
 
 
 def sigterm_handler_wrap(_signo):
@@ -25,7 +28,7 @@ def sigterm_handler_wrap(_signo):
     signal.signal(_signo, func)
 
 
-def start_channel(channel_name: str):
+def register_channel(channel_name: str):
     channel = channel_factory.create_channel(channel_name)
     if channel_name in ["wx", "wxy", "terminal", "wechatmp","web", "wechatmp_service", "wechatcom_app", "wework",
                         const.FEISHU, const.DINGTALK]:
@@ -37,7 +40,11 @@ def start_channel(channel_name: str):
             threading.Thread(target=linkai_client.start, args=(channel,)).start()
         except Exception as e:
             pass
-    channel.startup()
+    
+    # Register endpoint for this channel
+    endpoint = f"/{channel_name.lower()}"
+    app.add_url_rule(endpoint, endpoint, lambda: channel.handle_request(request), methods=["POST"])
+    channels[channel_name] = channel
 
 
 def run():
@@ -49,19 +56,22 @@ def run():
         # kill signal
         sigterm_handler_wrap(signal.SIGTERM)
 
-        # create channel
-        channel_name = conf().get("channel_type", "wx")
+        # create channels
+        channel_names = conf().get("channel_types", ["wx"])
+        if isinstance(channel_names, str):
+            channel_names = [channel_names]
 
         if "--cmd" in sys.argv:
-            channel_name = "terminal"
+            channel_names = ["terminal"]
 
-        if channel_name == "wxy":
-            os.environ["WECHATY_LOG"] = "warn"
+        for channel_name in channel_names:
+            if channel_name == "wxy":
+                os.environ["WECHATY_LOG"] = "warn"
+            register_channel(channel_name)
 
-        start_channel(channel_name)
-
-        while True:
-            time.sleep(1)
+        # Start web server
+        port = conf().get("port", 8080)
+        app.run(host="0.0.0.0", port=port)
     except Exception as e:
         logger.error("App startup failed!")
         logger.exception(e)

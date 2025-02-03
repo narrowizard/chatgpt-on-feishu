@@ -11,6 +11,7 @@ from common.log import logger
 # 将所有可用的配置项写在字典里, 请使用小写字母
 # 此处的配置值无实际意义，程序不会读取此处的配置，仅用于提示格式，请将配置加入到config.json中
 available_setting = {
+    "port": 8080,  # 监听端口
     # openai api配置
     "open_ai_api_key": "",  # openai api key
     # openai apibase，当use_azure_chatgpt为true时，需要设置对应的api base
@@ -144,7 +145,6 @@ available_setting = {
     "wechatcomapp_agent_id": "",  # 企业微信app的agent_id
     "wechatcomapp_aes_key": "",  # 企业微信app的aes_key
     # 飞书配置
-    "feishu_port": 80,  # 飞书bot监听端口
     "feishu_app_id": "",  # 飞书机器人应用APP Id
     "feishu_app_secret": "",  # 飞书机器人APP secret
     "feishu_token": "",  # 飞书 verification token
@@ -157,7 +157,7 @@ available_setting = {
     # chatgpt指令自定义触发词
     "clear_memory_commands": ["#清除记忆"],  # 重置会话指令，必须以#开头
     # channel配置
-    "channel_type": "",  # 通道类型，支持：{wx,wxy,terminal,wechatmp,wechatmp_service,wechatcom_app,dingtalk}
+    "channel_types": "",  # 通道类型，支持：{wx,wxy,terminal,wechatmp,wechatmp_service,wechatcom_app,dingtalk,gitlab}
     "subscribe_msg": "",  # 订阅消息, 支持: wechatmp, wechatmp_service, wechatcom_app
     "debug": False,  # 是否开启debug模式，开启后会打印更多日志
     "appdata_dir": "",  # 数据目录

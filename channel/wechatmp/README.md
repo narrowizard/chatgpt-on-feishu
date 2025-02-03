@@ -20,7 +20,7 @@ pip3 install wechatpy
 
 相关的服务器验证代码已经写好，你不需要再添加任何代码。你只需要在本项目根目录的`config.json`中添加
 ```
-"channel_type": "wechatmp",     # 如果通过了微信认证，将"wechatmp"替换为"wechatmp_service"，可极大的优化使用体验
+"channel_types": ["wechatmp"],     # 如果通过了微信认证，将"wechatmp"替换为"wechatmp_service"，可极大的优化使用体验
 "wechatmp_token": "xxxx",       # 微信公众平台的Token
 "wechatmp_port": 8080,          # 微信公众平台的端口,需要端口转发到80或443
 "wechatmp_app_id": "xxxx",      # 微信公众平台的appID

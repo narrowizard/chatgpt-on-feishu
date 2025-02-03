@@ -1,5 +1,6 @@
 {
-  "channel_type": "wx",
+  "port": 8080,
+  "channel_types": ["wx"],
   "model": "",
   "open_ai_api_key": "YOUR API KEY",
   "claude_api_key": "YOUR API KEY",

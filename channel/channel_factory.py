@@ -42,6 +42,9 @@ def create_channel(channel_type) -> Channel:
     elif channel_type == const.DINGTALK:
         from channel.dingtalk.dingtalk_channel import DingTalkChanel
         ch = DingTalkChanel()
+    elif channel_type == const.GITLAB:
+        from channel.gitlab.gitlab_channel import GitlabChannel
+        ch = GitlabChannel()
     else:
         raise RuntimeError
     ch.channel_type = channel_type

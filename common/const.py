@@ -102,3 +102,4 @@ MODEL_LIST = MODEL_LIST + GITEE_AI_MODEL_LIST
 # channel
 FEISHU = "feishu"
 DINGTALK = "dingtalk"
+GITLAB = "gitlab"
